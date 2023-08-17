@@ -1,0 +1,58 @@
+name: MSBuild
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  # Path to the solution file relative to the root of the project.
+  SOLUTION_FILE_PATH: .
+
+  # Configuration type to build.
+  # You can convert this to a build matrix if you need coverage of multiple configuration types.
+  # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  BUILD_CONFIGURATION: Release
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+
+    - name: Download Server
+      working-directory: ${{ env.GITHUB_WORKSPACE }}
+      run: |
+        mkdir SDK/tools/server
+        server_link=$(cat 'link.txt')
+        curl -L -o SDK/tools/server/server.zip "$server_link"
+        unzip SDK/tools/server/server.zip -d SDK/tools/server/
+      shell: bash
+
+    - name: Build Library
+      working-directory: ${{ env.GITHUB_WORKSPACE }}
+      run: |
+        cd SDK/tools
+        ./PeEditor.exe -l --pdb ./Server/bedrock_server.pdb -o ../lib
+      shell: bash
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: Build
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      # Add additional options to the MSBuild command line here (like platform or verbosity level).
+      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3.1.1
+      with:
+        path: ${{github.workspace}}/build/Release
