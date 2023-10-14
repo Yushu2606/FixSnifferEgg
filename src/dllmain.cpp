@@ -4,19 +4,13 @@
 #pragma comment(lib, "../SDK/lib/LiteLoader.lib")
 
 #include <llapi/HookAPI.h>
+#include <llapi/mc/Block.hpp>
+#include <llapi/mc/BlockSource.hpp>
 #include <llapi/mc/BlockPos.hpp>
 
-std::list<BlockPos> list{};
-
-TClasslessInstanceHook(void, "?onPlace@SnifferEggBlock@@UEBAXAEAVBlockSource@@AEBVBlockPos@@@Z", void* a2, BlockPos* a3) {
-    if (std::find(list.begin(), list.end(), *a3) != list.end()) {
-        list.remove(*a3);
-        return;
+TInstanceHook(void, "?onRemove@Block@@QEBAXAEAVBlockSource@@AEBVBlockPos@@@Z", Block, BlockSource* a2, BlockPos* a3) {
+    if (getTypeName() == "minecraft:sniffer_egg") {
+        a2->removeFromRandomTickingQueue(*a3, *this);
     }
-    original(this, a2, a3);
-}
-
-TClasslessInstanceHook(bool, "?_attachedBlockWalker@PistonBlockActor@@AEAA_NAEAVBlockSource@@AEBVBlockPos@@EE@Z", void* a2, BlockPos* a3, unsigned char a4, unsigned char a5) {
-    list.push_back(*a3);
-    return original(this, a2, a3, a4, a5);
+    return original(this, a2, a3);
 }
